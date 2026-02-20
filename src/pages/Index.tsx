@@ -5,6 +5,7 @@ import { GroceryCard } from "@/components/GroceryCard";
 import { CartSheet } from "@/components/CartSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 type GroceryItem = {
   id: string;
@@ -124,6 +125,7 @@ const Index = () => {
           </div>
         )}
       </main>
+      <WhatsAppButton />
     </div>
   );
 };
