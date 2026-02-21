@@ -1,73 +1,148 @@
-# Welcome to your Lovable project
+# Farm To Table – Food and Vegetables, Nakasero
 
-## Project info
+An online storefront for fresh farm produce sourced from **Nakasero Market, Uganda**. Customers browse available groceries, build a cart, and place orders that are confirmed over **WhatsApp**. Prices are in **UGX (Ugandan Shillings)**.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+- 🥦 Browse fresh vegetables, fruits, and groceries by category
+- 🔍 Search items by name
+- 🛒 Add to cart and adjust quantities
+- 📦 Place orders with name and WhatsApp number — confirmed via WhatsApp
+- 🔒 Password-protected admin panel for inventory and order management
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+| Layer | Technology |
+|-------|-----------|
+| Frontend | [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) |
+| Build | [Vite](https://vitejs.dev/) |
+| UI components | [shadcn/ui](https://ui.shadcn.com/) + [Tailwind CSS](https://tailwindcss.com/) |
+| Backend / DB | [Supabase](https://supabase.com/) (PostgreSQL + Auth + Row-Level Security) |
+| State / data-fetching | [TanStack Query](https://tanstack.com/query) |
+| Routing | [React Router v6](https://reactrouter.com/) |
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Getting Started (Local Development)
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- [Node.js](https://nodejs.org/) v18+ and npm (or use [nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
+- A [Supabase](https://supabase.com/) project (see [Supabase Setup](#supabase-setup) below)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### Setup
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# 1. Clone the repository
+git clone https://github.com/chrisapx/farm-to-table-fav.git
+cd farm-to-table-fav
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# 2. Install dependencies
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
+# 3. Configure environment variables (see below)
+cp .env.example .env
+# Edit .env with your Supabase credentials
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 4. Start the development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app will be available at `http://localhost:8080`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Environment Variables
 
-**Use GitHub Codespaces**
+Create a `.env` file at the project root with the following variables:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```env
+VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<your-supabase-anon-key>
+```
 
-## What technologies are used for this project?
+These values are found in your Supabase project under **Project Settings → API**.
 
-This project is built with:
+## Available Scripts
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with HMR |
+| `npm run build` | Production build (output in `dist/`) |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run unit tests with Vitest |
+| `npm run test:watch` | Run tests in watch mode |
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Maintainer Documentation
 
-## Can I connect a custom domain to my Lovable project?
+### Supabase Setup
 
-Yes, you can!
+1. Create a new project at [supabase.com](https://supabase.com/).
+2. Run the SQL migrations in order from the `supabase/migrations/` folder inside the Supabase **SQL Editor** to create the required tables (`grocery_items`, `orders`, `order_items`).
+3. Copy your **Project URL** and **anon public key** from **Project Settings → API** into `.env`.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+#### Database Schema
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```
+grocery_items
+  id, name, description, price (UGX), unit, category,
+  image_url, available (bool), stock_quantity, created_at, updated_at
+
+orders
+  id, customer_name, whatsapp_number, status (pending|confirmed|delivered),
+  notes, created_at, updated_at
+
+order_items
+  id, order_id → orders, grocery_item_id → grocery_items,
+  item_name, quantity, unit_price, unit
+```
+
+Row-Level Security is enabled on all tables:
+- **Public** can read available `grocery_items` and insert `orders` / `order_items`.
+- **Authenticated users** (admins) can create, update, and delete `grocery_items` and manage `orders`.
+
+### Admin Panel
+
+The admin panel is available at `/admin`.
+
+- Log in with an email/password account created in **Supabase → Authentication → Users**.
+- **Inventory tab** – add, edit, toggle availability, and delete grocery items.
+- **Orders tab** – view incoming orders, confirm them, and mark as delivered.
+
+To create the first admin account:
+1. Go to your Supabase project → **Authentication → Users → Add user**.
+2. Enter an email and password, then click **Create User**.
+3. Log in at `/admin` with those credentials.
+
+### WhatsApp Contact Number
+
+The WhatsApp floating button is configured in `src/components/WhatsAppButton.tsx`. Update the `WHATSAPP_NUMBER` constant to your business number in international format **without** the leading `+` sign (e.g. for +256 712 345 678, use `256712345678`).
+
+### Deployment
+
+The app is a static SPA and can be deployed to any static hosting provider.
+
+**Recommended: [Netlify](https://netlify.com/) or [Vercel](https://vercel.com/)**
+
+```sh
+# Build for production
+npm run build
+# Deploy the contents of dist/
+```
+
+Set the environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`) in your hosting provider's dashboard.
+
+**Important:** Configure your hosting provider to redirect all routes to `index.html` so that React Router works correctly (e.g. set up a `_redirects` file on Netlify: `/* /index.html 200`).
+
+### Adding or Updating Dependencies
+
+Always check for known vulnerabilities before adding new packages. Run:
+
+```sh
+npm audit
+```
+
+### Contributing
+
+1. Create a feature branch from `main`.
+2. Make your changes and ensure `npm run lint` and `npm test` pass.
+3. Open a pull request with a clear description of your changes.
