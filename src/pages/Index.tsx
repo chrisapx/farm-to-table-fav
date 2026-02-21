@@ -6,6 +6,14 @@ import { CartSheet } from "@/components/CartSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationLink,
+} from "@/components/ui/pagination";
 
 type GroceryItem = {
   id: string;
@@ -18,11 +26,14 @@ type GroceryItem = {
   available: boolean;
 };
 
+const ITEMS_PER_PAGE = 12;
+
 const Index = () => {
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -45,6 +56,13 @@ const Index = () => {
     const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginated = filtered.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
+
+  const handleSearch = (value: string) => { setSearch(value); setCurrentPage(1); };
+  const handleCategory = (cat: string) => { setSelectedCategory(cat); setCurrentPage(1); };
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,7 +96,7 @@ const Index = () => {
             <Input
               placeholder="Search items..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => handleSearch(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -91,7 +109,7 @@ const Index = () => {
           {categories.map(cat => (
             <button
               key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              onClick={() => handleCategory(cat)}
               className={`px-4 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
                 selectedCategory === cat
                   ? "bg-primary text-primary-foreground"
@@ -118,11 +136,46 @@ const Index = () => {
             <p>No items found. Check back soon!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filtered.map(item => (
-              <GroceryCard key={item.id} {...item} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {paginated.map(item => (
+                <GroceryCard key={item.id} {...item} />
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <Pagination className="mt-8">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={e => { e.preventDefault(); setCurrentPage(Math.max(1, safePage - 1)); }}
+                      aria-disabled={safePage === 1}
+                      className={safePage === 1 ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        href="#"
+                        isActive={page === safePage}
+                        onClick={e => { e.preventDefault(); setCurrentPage(page); }}
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={e => { e.preventDefault(); setCurrentPage(Math.min(totalPages, safePage + 1)); }}
+                      aria-disabled={safePage === totalPages}
+                      className={safePage === totalPages ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
         )}
       </main>
       <WhatsAppButton />

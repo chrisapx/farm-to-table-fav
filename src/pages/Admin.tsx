@@ -11,6 +11,14 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, LogIn, LogOut, ArrowLeft, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationLink,
+} from "@/components/ui/pagination";
 
 type GroceryItem = {
   id: string;
@@ -41,6 +49,8 @@ type Order = {
 };
 
 const CATEGORIES = ["Vegetables", "Fruits", "Dairy", "Meat", "Grains", "Beverages", "Snacks", "General"];
+const ADMIN_ITEMS_PER_PAGE = 10;
+const ADMIN_ORDERS_PER_PAGE = 10;
 
 function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [email, setEmail] = useState("");
@@ -145,7 +155,7 @@ function ItemForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Price (KSh)</Label>
+          <Label>Price (UGX)</Label>
           <Input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} required />
         </div>
         <div>
@@ -185,6 +195,8 @@ export default function Admin() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [editItem, setEditItem] = useState<GroceryItem | undefined>();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [itemsPage, setItemsPage] = useState(1);
+  const [ordersPage, setOrdersPage] = useState(1);
 
   useEffect(() => {
     supabase.auth.onAuthStateChange((_, s) => {
@@ -272,89 +284,173 @@ export default function Admin() {
               </Dialog>
             </div>
 
-            <div className="space-y-2">
-              {items.map(item => (
-                <div key={item.id} className="flex items-center gap-4 p-3 rounded-lg border bg-card">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      KSh {item.price}/{item.unit} · {item.category} · Stock: {item.stock_quantity}
-                    </p>
+            {(() => {
+              const totalItemPages = Math.max(1, Math.ceil(items.length / ADMIN_ITEMS_PER_PAGE));
+              const safeItemsPage = Math.min(itemsPage, totalItemPages);
+              const pagedItems = items.slice((safeItemsPage - 1) * ADMIN_ITEMS_PER_PAGE, safeItemsPage * ADMIN_ITEMS_PER_PAGE);
+              return (
+                <>
+                  <div className="space-y-2">
+                    {pagedItems.map(item => (
+                      <div key={item.id} className="flex items-center gap-4 p-3 rounded-lg border bg-card">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{item.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            UGX {item.price}/{item.unit} · {item.category} · Stock: {item.stock_quantity}
+                          </p>
+                        </div>
+                        <Switch checked={item.available} onCheckedChange={() => toggleAvailable(item)} />
+                        <Button size="icon" variant="ghost" onClick={() => { setEditItem(item); setDialogOpen(true); }}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteItem(item.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    {items.length === 0 && (
+                      <p className="text-center text-muted-foreground py-12">No items yet. Add your first grocery item!</p>
+                    )}
                   </div>
-                  <Switch checked={item.available} onCheckedChange={() => toggleAvailable(item)} />
-                  <Button size="icon" variant="ghost" onClick={() => { setEditItem(item); setDialogOpen(true); }}>
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteItem(item.id)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-              {items.length === 0 && (
-                <p className="text-center text-muted-foreground py-12">No items yet. Add your first grocery item!</p>
-              )}
-            </div>
+                  {totalItemPages > 1 && (
+                    <Pagination className="mt-6">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            href="#"
+                            onClick={e => { e.preventDefault(); setItemsPage(Math.max(1, safeItemsPage - 1)); }}
+                            aria-disabled={safeItemsPage === 1}
+                            className={safeItemsPage === 1 ? "pointer-events-none opacity-50" : ""}
+                          />
+                        </PaginationItem>
+                        {Array.from({ length: totalItemPages }, (_, i) => i + 1).map(page => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              isActive={page === safeItemsPage}
+                              onClick={e => { e.preventDefault(); setItemsPage(page); }}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext
+                            href="#"
+                            onClick={e => { e.preventDefault(); setItemsPage(Math.min(totalItemPages, safeItemsPage + 1)); }}
+                            aria-disabled={safeItemsPage === totalItemPages}
+                            className={safeItemsPage === totalItemPages ? "pointer-events-none opacity-50" : ""}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </>
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="orders">
-            <div className="space-y-4">
-              {orders.map(order => (
-                <div key={order.id} className="p-4 rounded-lg border bg-card space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{order.customer_name}</p>
-                      <a
-                        href={`https://wa.me/${order.whatsapp_number.replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline flex items-center gap-1"
-                      >
-                        <MessageSquare className="w-3 h-3" />
-                        {order.whatsapp_number}
-                      </a>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        order.status === 'pending' ? 'bg-secondary/20 text-secondary-foreground' :
-                        order.status === 'confirmed' ? 'bg-primary/20 text-accent-foreground' :
-                        'bg-muted text-muted-foreground'
-                      }`}>
-                        {order.status}
-                      </span>
-                      <p className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleString()}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-muted/50 rounded p-2">
-                    {order.order_items.map(oi => (
-                      <div key={oi.id} className="flex justify-between text-sm py-0.5">
-                        <span>{oi.item_name} × {oi.quantity}</span>
-                        <span className="text-muted-foreground">KSh {(oi.unit_price * oi.quantity).toFixed(0)}</span>
+            {(() => {
+              const totalOrderPages = Math.max(1, Math.ceil(orders.length / ADMIN_ORDERS_PER_PAGE));
+              const safeOrdersPage = Math.min(ordersPage, totalOrderPages);
+              const pagedOrders = orders.slice((safeOrdersPage - 1) * ADMIN_ORDERS_PER_PAGE, safeOrdersPage * ADMIN_ORDERS_PER_PAGE);
+              return (
+                <>
+                  <div className="space-y-4">
+                    {pagedOrders.map(order => (
+                      <div key={order.id} className="p-4 rounded-lg border bg-card space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-medium">{order.customer_name}</p>
+                            <a
+                              href={`https://wa.me/${order.whatsapp_number.replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline flex items-center gap-1"
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                              {order.whatsapp_number}
+                            </a>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              order.status === 'pending' ? 'bg-secondary/20 text-secondary-foreground' :
+                              order.status === 'confirmed' ? 'bg-primary/20 text-accent-foreground' :
+                              'bg-muted text-muted-foreground'
+                            }`}>
+                              {order.status}
+                            </span>
+                            <p className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleString()}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-muted/50 rounded p-2">
+                          {order.order_items.map(oi => (
+                            <div key={oi.id} className="flex justify-between text-sm py-0.5">
+                              <span>{oi.item_name} × {oi.quantity}</span>
+                              <span className="text-muted-foreground">UGX {(oi.unit_price * oi.quantity).toFixed(0)}</span>
+                            </div>
+                          ))}
+                          <div className="flex justify-between font-medium text-sm pt-1 border-t mt-1">
+                            <span>Total</span>
+                            <span>UGX {order.order_items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(0)}</span>
+                          </div>
+                        </div>
+
+                        {order.notes && <p className="text-sm text-muted-foreground italic">"{order.notes}"</p>}
+
+                        {order.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => updateOrderStatus(order.id, 'confirmed')}>Confirm</Button>
+                            <Button size="sm" variant="secondary" onClick={() => updateOrderStatus(order.id, 'delivered')}>Mark Delivered</Button>
+                          </div>
+                        )}
+                        {order.status === 'confirmed' && (
+                          <Button size="sm" variant="secondary" onClick={() => updateOrderStatus(order.id, 'delivered')}>Mark Delivered</Button>
+                        )}
                       </div>
                     ))}
-                    <div className="flex justify-between font-medium text-sm pt-1 border-t mt-1">
-                      <span>Total</span>
-                      <span>KSh {order.order_items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(0)}</span>
-                    </div>
+                    {orders.length === 0 && (
+                      <p className="text-center text-muted-foreground py-12">No orders yet.</p>
+                    )}
                   </div>
-
-                  {order.notes && <p className="text-sm text-muted-foreground italic">"{order.notes}"</p>}
-
-                  {order.status === 'pending' && (
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => updateOrderStatus(order.id, 'confirmed')}>Confirm</Button>
-                      <Button size="sm" variant="secondary" onClick={() => updateOrderStatus(order.id, 'delivered')}>Mark Delivered</Button>
-                    </div>
+                  {totalOrderPages > 1 && (
+                    <Pagination className="mt-6">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            href="#"
+                            onClick={e => { e.preventDefault(); setOrdersPage(Math.max(1, safeOrdersPage - 1)); }}
+                            aria-disabled={safeOrdersPage === 1}
+                            className={safeOrdersPage === 1 ? "pointer-events-none opacity-50" : ""}
+                          />
+                        </PaginationItem>
+                        {Array.from({ length: totalOrderPages }, (_, i) => i + 1).map(page => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              isActive={page === safeOrdersPage}
+                              onClick={e => { e.preventDefault(); setOrdersPage(page); }}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext
+                            href="#"
+                            onClick={e => { e.preventDefault(); setOrdersPage(Math.min(totalOrderPages, safeOrdersPage + 1)); }}
+                            aria-disabled={safeOrdersPage === totalOrderPages}
+                            className={safeOrdersPage === totalOrderPages ? "pointer-events-none opacity-50" : ""}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
                   )}
-                  {order.status === 'confirmed' && (
-                    <Button size="sm" variant="secondary" onClick={() => updateOrderStatus(order.id, 'delivered')}>Mark Delivered</Button>
-                  )}
-                </div>
-              ))}
-              {orders.length === 0 && (
-                <p className="text-center text-muted-foreground py-12">No orders yet.</p>
-              )}
-            </div>
+                </>
+              );
+            })()}
           </TabsContent>
         </Tabs>
       </div>
