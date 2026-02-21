@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search } from "lucide-react";
+import { Search, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { GroceryCard } from "@/components/GroceryCard";
 import { CartSheet } from "@/components/CartSheet";
@@ -71,11 +71,11 @@ const Index = () => {
         <div className="container flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2">
             <span className="text-2xl">🥦</span>
-            <h1 className="font-heading text-xl text-foreground">FreshCart</h1>
+            <h1 className="font-heading text-xl text-foreground">FarmToTable F&V</h1>
           </Link>
           <div className="flex items-center gap-3">
-            <Link to="/admin" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Admin
+            <Link to="/admin" className="text-muted-foreground hover:text-foreground transition-colors" title="Admin">
+              <Shield className="w-5 h-5" />
             </Link>
             <CartSheet />
           </div>
