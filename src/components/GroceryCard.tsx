@@ -30,7 +30,7 @@ export function GroceryCard({ id, name, description, price, unit, image_url }: G
         {description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{description}</p>}
         <div className="flex items-center justify-between mt-3">
           <span className="text-primary font-semibold text-lg">
-            KSh {price.toFixed(0)}<span className="text-sm text-muted-foreground font-normal">/{unit}</span>
+            UGX {price.toFixed(0)}<span className="text-sm text-muted-foreground font-normal">/{unit}</span>
           </span>
           <Button
             size="sm"

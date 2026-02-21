@@ -98,7 +98,7 @@ export function CartSheet() {
               <div key={item.id} className="flex items-center gap-3 p-3 rounded-md bg-muted/50">
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{item.name}</p>
-                  <p className="text-xs text-muted-foreground">KSh {item.price}/{item.unit}</p>
+                  <p className="text-xs text-muted-foreground">UGX {item.price}/{item.unit}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
@@ -121,7 +121,7 @@ export function CartSheet() {
           <div className="border-t pt-4 space-y-3">
             <div className="flex justify-between font-heading text-lg">
               <span>Total</span>
-              <span className="text-primary">KSh {total.toFixed(0)}</span>
+              <span className="text-primary">UGX {total.toFixed(0)}</span>
             </div>
 
             <div className="space-y-2">
