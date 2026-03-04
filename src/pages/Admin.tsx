@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, LogIn, LogOut, ArrowLeft, MessageSquare } from "lucide-react";
+import { Plus, Pencil, Trash2, LogIn, LogOut, ArrowLeft, MessageSquare, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   Pagination,
@@ -110,6 +110,23 @@ function ItemForm({
   const [unit, setUnit] = useState(item?.unit || "kg");
   const [category, setCategory] = useState(item?.category || "General");
   const [imageUrl, setImageUrl] = useState(item?.image_url || "");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imageUploadMode, setImageUploadMode] = useState<"url" | "file">("url");
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(imageFile);
+    setImagePreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImageFile(e.target.files?.[0] ?? null);
+  };
   const [stockQuantity, setStockQuantity] = useState(item?.stock_quantity?.toString() || "0");
   const [saving, setSaving] = useState(false);
 
@@ -118,13 +135,30 @@ function ItemForm({
     if (!name.trim() || !price) return;
     setSaving(true);
 
+    let finalImageUrl = imageUrl.trim() || null;
+
+    if (imageUploadMode === "file" && imageFile) {
+      const fileExt = imageFile.name.split(".").pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("item-images")
+        .upload(fileName, imageFile);
+      if (uploadError) {
+        toast.error("Image upload failed: " + uploadError.message);
+        setSaving(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("item-images").getPublicUrl(fileName);
+      finalImageUrl = urlData.publicUrl;
+    }
+
     const payload = {
       name: name.trim(),
       description: description.trim() || null,
       price: parseFloat(price),
       unit,
       category,
-      image_url: imageUrl.trim() || null,
+      image_url: finalImageUrl,
       stock_quantity: parseInt(stockQuantity) || 0,
     };
 
@@ -179,8 +213,43 @@ function ItemForm({
         </div>
       </div>
       <div>
-        <Label>Image URL (optional)</Label>
-        <Input value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://..." />
+        <Label>Image (optional)</Label>
+        <div className="flex gap-2 mt-1 mb-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={imageUploadMode === "url" ? "default" : "outline"}
+            onClick={() => setImageUploadMode("url")}
+          >
+            URL
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={imageUploadMode === "file" ? "default" : "outline"}
+            onClick={() => setImageUploadMode("file")}
+          >
+            <Upload className="w-3 h-3 mr-1" /> Upload
+          </Button>
+        </div>
+        {imageUploadMode === "url" ? (
+          <Input value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://..." />
+        ) : (
+          <div className="space-y-2">
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+            />
+            {imagePreviewUrl && (
+              <img
+                src={imagePreviewUrl}
+                alt="Preview"
+                className="h-24 w-24 object-cover rounded border"
+              />
+            )}
+          </div>
+        )}
       </div>
       <Button type="submit" className="w-full" disabled={saving}>
         {saving ? "Saving..." : item ? "Update Item" : "Add Item"}
